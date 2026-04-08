@@ -821,7 +821,10 @@ export async function main(argv = process.argv) {
 const entryFile = fileURLToPath(import.meta.url);
 const executedFile = process.argv[1] ? realpathSync(path.resolve(process.argv[1])) : "";
 
-if (executedFile === entryFile) {
+const isWindows = process.platform === "win32";
+const isMain = executedFile === entryFile || (isWindows && executedFile.toLowerCase() === entryFile.toLowerCase());
+
+if (isMain) {
   main().then(
     (code) => process.exit(code),
     (error) => {
