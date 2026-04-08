@@ -13,8 +13,7 @@ const SUPPORTED_PROVIDERS = new Set([
 const SYSTEM_PROMPT = "You explain Git commits clearly and accurately for developers.";
 
 export function getProviderConfig(providerOverride, modelOverride) {
-  const defaultProvider = process.env.GROQ_API || process.env.GROQ_API_KEY ? "groq" : "openai";
-  const provider = (providerOverride ?? process.env.LLM_PROVIDER ?? defaultProvider).toLowerCase();
+    const defaultProvider = process.env.GROQ_API_KEY ? "groq" : "openai";
 
   if (!SUPPORTED_PROVIDERS.has(provider)) {
     throw new Error(
@@ -34,7 +33,7 @@ export function getProviderConfig(providerOverride, modelOverride) {
   if (provider === "groq") {
     return {
       provider,
-      apiKey: process.env.GROQ_API_KEY || process.env.GROQ_API,
+      apiKey: process.env.GROQ_API_KEY,
       baseUrl: process.env.GROQ_BASE_URL ?? "https://api.groq.com/openai/v1",
       model: modelOverride ?? process.env.GROQ_MODEL ?? process.env.LLM_MODEL ?? "llama-3.3-70b-versatile"
     };
