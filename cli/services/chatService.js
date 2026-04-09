@@ -356,26 +356,34 @@ Please acknowledge this selection in a maximum of 3 sentences, giving a brief su
               const selectedCommits = await this.showCommitSelector(commits, this.activeRepo.name, true);
               
               if (selectedCommits && selectedCommits.length > 0) {
-                console.log(`\n${COLORS.cyan}⏳ Fetching context for ${selectedCommits.length} selected commits...${COLORS.reset}`);
+                console.log(`\n${COLORS.cyan}⏳ Fetching context for ${selectedCommits.length} selected commits...\n${COLORS.reset}`);
+                
+                let multiContext = `The user selected ${selectedCommits.length} commits for analysis.\nPlease provide a direct, concise analysis for each commit individually. Keep it structural and not too long or too short.\n\n`;
+                
                 for (const sc of selectedCommits) {
-                    console.log(`\n${COLORS.magenta}Analyzing commit ${sc.sha}... ${COLORS.reset}`);
+                    console.log(`${COLORS.magenta}Fetching commit ${sc.sha}... ${COLORS.reset}`);
                     try {
                       const details = await fetchCommitDetails(this.token, this.activeRepo.owner, this.activeRepo.name, sc.fullSha);
                       let filesStr = details.files.map(f => `--- File: ${f.filename} (Status: ${f.status}) ---\nAdditions: ${f.additions} | Deletions: ${f.deletions}\nPatch:\n${f.patch}`).join('\n\n');
-                      if (filesStr.length > 50000) filesStr = filesStr.substring(0, 50000) + "\n\n...[truncated]";
                       
-                      const singleContext = `Please analyze this individual commit: [COMMIT: ${sc.sha} - ${sc.message}]\nChanges/Diffs:\n${filesStr}\n\nPlease output your analysis for this specific commit only.`;
-                      const answer = await this.sendMessage(singleContext);
+                      // Allocate budget based on num commits, total max ~50k
+                      const budget = Math.floor(50000 / selectedCommits.length);
+                      if (filesStr.length > budget) filesStr = filesStr.substring(0, budget) + "\n\n...[truncated due to length]";
                       
-                      console.log(`\n${COLORS.green}Analysis for ${sc.sha}:${COLORS.reset}\n${answer}`);
+                      multiContext += `[COMMIT: ${sc.sha} - ${sc.message}]\nChanges/Diffs:\n${filesStr}\n\n---\n\n`;
                     } catch (e) {
-                      console.log(`\n${COLORS.red}Failed to load diff for ${sc.sha}: ${e.message}${COLORS.reset}`);
+                      console.log(`${COLORS.red}Failed to load diff for ${sc.sha}: ${e.message}${COLORS.reset}`);
                     }
-                  }
+                }
+                
+                console.log(`\n${COLORS.cyan}✨ Generating unified analysis via LLM... ${COLORS.reset}`);
+                
+                const answer = await this.sendMessage(multiContext);
+                console.log(`\n${COLORS.green}Analysis for selected commits:${COLORS.reset}\n${answer}`);
                   
-                  response = "I have fetched and analyzed each commit individually as requested. Let me know if you need specific details out of them.";
-                  keepProcessing = false;
-                  continue;
+                response = "I have fetched and summarized the selected commits. Let me know if you need deeper details out of them.";
+                keepProcessing = false;
+                continue;
               } else {
                 response = "User cancelled commit selection or no commits were selected.";
                 keepProcessing = true;
